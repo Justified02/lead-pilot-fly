@@ -88,6 +88,9 @@ export default function LeadGenerationForm({ onLeadsGenerated }: LeadGenerationF
         leads = data;
       } else if (data && data.leads && Array.isArray(data.leads)) {
         leads = data.leads;
+      } else if (data && typeof data === 'object' && data.id && data.name) {
+        // Single lead object - wrap in array
+        leads = [data];
       } else if (data && typeof data === 'object') {
         // Try to extract leads from nested structure
         const extractLeads = (obj: any): any[] => {
