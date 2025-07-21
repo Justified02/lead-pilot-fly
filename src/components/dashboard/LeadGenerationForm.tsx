@@ -78,11 +78,47 @@ export default function LeadGenerationForm({ onLeadsGenerated }: LeadGenerationF
 
       const data = await response.json();
       console.log('Response data:', data);
+      console.log('Response data type:', typeof data);
+      console.log('Is array:', Array.isArray(data));
 
-      // Handle both formats: direct array or wrapped in { leads: [...] }
-      const leads = Array.isArray(data) ? data : data.leads;
+      let leads = null;
 
-      if (leads && Array.isArray(leads)) {
+      // Handle different response formats
+      if (Array.isArray(data)) {
+        leads = data;
+      } else if (data && data.leads && Array.isArray(data.leads)) {
+        leads = data.leads;
+      } else if (data && typeof data === 'object') {
+        // Try to extract leads from nested structure
+        const extractLeads = (obj: any): any[] => {
+          if (Array.isArray(obj)) return obj;
+          if (obj && typeof obj === 'object') {
+            // Look for objects that have lead-like properties
+            const keys = Object.keys(obj);
+            for (const key of keys) {
+              const value = obj[key];
+              if (value && typeof value === 'object' && value.id && value.name && value.email) {
+                return [value];
+              }
+              if (Array.isArray(value)) {
+                return value;
+              }
+              const nested = extractLeads(value);
+              if (nested.length > 0) return nested;
+            }
+          }
+          return [];
+        };
+        
+        const extractedLeads = extractLeads(data);
+        if (extractedLeads.length > 0) {
+          leads = extractedLeads;
+        }
+      }
+
+      console.log('Extracted leads:', leads);
+
+      if (leads && Array.isArray(leads) && leads.length > 0) {
         console.log('Processing leads:', leads.length);
         
         // Save leads to database with user_id
