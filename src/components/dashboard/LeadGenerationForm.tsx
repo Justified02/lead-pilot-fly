@@ -80,16 +80,22 @@ export default function LeadGenerationForm({ onLeadsGenerated }: LeadGenerationF
       console.log('Response data:', data);
       console.log('Response data type:', typeof data);
       console.log('Is array:', Array.isArray(data));
+      console.log('Data keys:', Object.keys(data || {}));
+      console.log('Data has id:', data?.id);
+      console.log('Data has name:', data?.name);
 
       let leads = null;
 
       // Handle different response formats
       if (Array.isArray(data)) {
+        console.log('Data is array, using directly');
         leads = data;
       } else if (data && data.leads && Array.isArray(data.leads)) {
+        console.log('Data has leads array property');
         leads = data.leads;
       } else if (data && typeof data === 'object' && data.id && data.name) {
         // Single lead object - wrap in array
+        console.log('Data is single lead object, wrapping in array');
         leads = [data];
       } else if (data && typeof data === 'object') {
         // Try to extract leads from nested structure
