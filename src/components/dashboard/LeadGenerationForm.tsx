@@ -90,42 +90,18 @@ export default function LeadGenerationForm({ onLeadsGenerated }: LeadGenerationF
       if (Array.isArray(data)) {
         console.log('Data is array, using directly');
         leads = data;
-      } else if (data && data.leads && Array.isArray(data.leads)) {
-        console.log('Data has leads array property');
-        leads = data.leads;
       } else if (data && typeof data === 'object' && data.id && data.name) {
         // Single lead object - wrap in array
         console.log('Data is single lead object, wrapping in array');
         leads = [data];
-      } else if (data && typeof data === 'object') {
-        // Try to extract leads from nested structure
-        const extractLeads = (obj: any): any[] => {
-          if (Array.isArray(obj)) return obj;
-          if (obj && typeof obj === 'object') {
-            // Look for objects that have lead-like properties
-            const keys = Object.keys(obj);
-            for (const key of keys) {
-              const value = obj[key];
-              if (value && typeof value === 'object' && value.id && value.name && value.email) {
-                return [value];
-              }
-              if (Array.isArray(value)) {
-                return value;
-              }
-              const nested = extractLeads(value);
-              if (nested.length > 0) return nested;
-            }
-          }
-          return [];
-        };
-        
-        const extractedLeads = extractLeads(data);
-        if (extractedLeads.length > 0) {
-          leads = extractedLeads;
-        }
+      } else if (data && data.leads && Array.isArray(data.leads)) {
+        console.log('Data has leads array property');
+        leads = data.leads;
+      } else {
+        console.error('Could not extract leads from response:', data);
       }
 
-      console.log('Extracted leads:', leads);
+      console.log('Final extracted leads:', leads);
 
       if (leads && Array.isArray(leads) && leads.length > 0) {
         console.log('Processing leads:', leads.length);
