@@ -106,13 +106,16 @@ export default function LeadGenerationForm({ onLeadsGenerated }: LeadGenerationF
       if (leads && Array.isArray(leads) && leads.length > 0) {
         console.log('Processing leads:', leads.length);
         
-        // Save leads to database with user_id
-        const leadsToSave = leads.map((lead: any) => ({
-          ...lead,
-          user_id: user.id,
-          email_sent: false,
-          sent_at: null
-        }));
+        // Save leads to database with user_id and generate proper UUIDs
+        const leadsToSave = leads.map((lead: any) => {
+          const { id, ...leadWithoutId } = lead; // Remove the original id
+          return {
+            ...leadWithoutId,
+            user_id: user.id,
+            email_sent: false,
+            sent_at: null
+          };
+        });
 
         console.log('Saving leads to database:', leadsToSave);
 
