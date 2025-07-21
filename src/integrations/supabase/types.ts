@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      lead_history: {
+        Row: {
+          company: string | null
+          company_domain: string | null
+          created_at: string
+          email: string | null
+          email_sent: boolean | null
+          generated_email: string | null
+          id: string
+          image: string | null
+          linkedin: string | null
+          location: string | null
+          name: string
+          sent_at: string | null
+          snippet: string | null
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company?: string | null
+          company_domain?: string | null
+          created_at?: string
+          email?: string | null
+          email_sent?: boolean | null
+          generated_email?: string | null
+          id?: string
+          image?: string | null
+          linkedin?: string | null
+          location?: string | null
+          name: string
+          sent_at?: string | null
+          snippet?: string | null
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company?: string | null
+          company_domain?: string | null
+          created_at?: string
+          email?: string | null
+          email_sent?: boolean | null
+          generated_email?: string | null
+          id?: string
+          image?: string | null
+          linkedin?: string | null
+          location?: string | null
+          name?: string
+          sent_at?: string | null
+          snippet?: string | null
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string

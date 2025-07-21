@@ -1,169 +1,135 @@
 import { useAuth } from '@/hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { LogOut, Search, Users, Mail, BarChart3 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Link } from 'react-router-dom';
+import { Zap, Users, TrendingUp, Target, ArrowRight } from 'lucide-react';
+import DashboardLayout from '@/components/dashboard/DashboardLayout';
 
 export default function Dashboard() {
-  const { user, signOut, loading } = useAuth();
-  const navigate = useNavigate();
-  const { toast } = useToast();
+  const { user } = useAuth();
 
-  // Redirect if not authenticated
-  if (!loading && !user) {
-    navigate('/auth');
-    return null;
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  const handleSignOut = async () => {
-    const { error } = await signOut();
-    if (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to sign out',
-        variant: 'destructive',
-      });
-    } else {
-      navigate('/');
+  const stats = [
+    {
+      icon: Target,
+      label: 'Leads Generated',
+      value: '0',
+      description: 'Total leads found'
+    },
+    {
+      icon: Users,
+      label: 'Credits Used',
+      value: '0',
+      description: 'API calls made'
+    },
+    {
+      icon: TrendingUp,
+      label: 'Success Rate',
+      value: '0%',
+      description: 'Successful matches'
     }
-  };
+  ];
+
+  const quickActions = [
+    {
+      icon: Zap,
+      title: 'Generate New Leads',
+      description: 'Use AI to find your ideal prospects',
+      href: '/dashboard/generate',
+      primary: true
+    },
+    {
+      icon: Users,
+      title: 'View Profile',
+      description: 'Manage your account settings',
+      href: '/dashboard/profile',
+      primary: false
+    }
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-      {/* Header */}
-      <header className="border-b bg-white/50 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-primary rounded-lg"></div>
-            <span className="text-xl font-bold text-foreground">LeadPilot</span>
+    <DashboardLayout>
+      <div className="space-y-8">
+        {/* Welcome Section */}
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold text-foreground">
+            Welcome back, {user?.user_metadata?.full_name || 'there'}!
+          </h1>
+          <p className="text-muted-foreground">
+            Ready to find your next prospects? Let's get started.
+          </p>
+        </div>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {stats.map((stat, index) => (
+            <Card key={index} className="bg-card/50 backdrop-blur-sm border-border/50">
+              <CardContent className="p-6">
+                <div className="flex items-center space-x-4">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <stat.icon className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+                    <p className="text-sm font-medium text-foreground">{stat.label}</p>
+                    <p className="text-xs text-muted-foreground">{stat.description}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Quick Actions */}
+        <div className="space-y-4">
+          <h2 className="text-2xl font-bold text-foreground">Quick Actions</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {quickActions.map((action, index) => (
+              <Card key={index} className="bg-card/50 backdrop-blur-sm border-border/50 hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-3">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <action.icon className="h-6 w-6 text-primary" />
+                    </div>
+                    <span>{action.title}</span>
+                  </CardTitle>
+                  <CardDescription>{action.description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button asChild variant={action.primary ? "default" : "outline"} className="w-full">
+                    <Link to={action.href} className="flex items-center justify-center">
+                      Get Started
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-          <div className="flex items-center space-x-4">
-            <span className="text-sm text-muted-foreground">Welcome, {user?.user_metadata?.full_name || user?.email}</span>
-            <Button variant="outline" size="sm" onClick={handleSignOut}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
-          <p className="text-muted-foreground">Generate and manage your LinkedIn leads</p>
         </div>
 
-        {/* Feature Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-white/50 backdrop-blur-sm border-0 hover:shadow-lg transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-center space-x-2">
-                <Search className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg">Lead Generation</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                Generate targeted leads using natural language queries
-              </p>
-              <Button className="w-full" disabled>
-                Coming Soon
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/50 backdrop-blur-sm border-0 hover:shadow-lg transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-center space-x-2">
-                <Users className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg">Lead Management</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                View, filter, and edit your generated leads
-              </p>
-              <Button variant="outline" className="w-full" disabled>
-                Coming Soon
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/50 backdrop-blur-sm border-0 hover:shadow-lg transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-center space-x-2">
-                <Mail className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg">Email Outreach</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                Send personalized emails to your leads
-              </p>
-              <Button variant="outline" className="w-full" disabled>
-                Coming Soon
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/50 backdrop-blur-sm border-0 hover:shadow-lg transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-center space-x-2">
-                <BarChart3 className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg">Analytics</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                Track your outreach performance and results
-              </p>
-              <Button variant="outline" className="w-full" disabled>
-                Coming Soon
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Welcome Message */}
-        <Card className="bg-white/50 backdrop-blur-sm border-0">
+        {/* Recent Activity */}
+        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
           <CardHeader>
-            <CardTitle>Welcome to LeadPilot</CardTitle>
-            <CardDescription>
-              Your AI-powered LinkedIn lead generation platform
-            </CardDescription>
+            <CardTitle>Recent Activity</CardTitle>
+            <CardDescription>Your latest lead generation activities</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground mb-4">
-              You're all set! We're currently building out the core features that will help you:
-            </p>
-            <ul className="list-disc list-inside space-y-2 text-muted-foreground">
-              <li>Generate targeted LinkedIn leads using simple natural language</li>
-              <li>Enrich lead data with company information and contact details</li>
-              <li>Create and send personalized outreach emails</li>
-              <li>Track your campaign performance and lead responses</li>
-            </ul>
-            <div className="mt-6 p-4 bg-primary/5 rounded-lg">
-              <p className="text-sm font-medium text-primary">Coming Soon</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                These features are currently in development and will be available shortly.
+            <div className="text-center py-8">
+              <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No activity yet</h3>
+              <p className="text-muted-foreground mb-4">
+                Start generating leads to see your activity here
               </p>
+              <Button asChild>
+                <Link to="/dashboard/generate">
+                  <Zap className="mr-2 h-4 w-4" />
+                  Generate Your First Leads
+                </Link>
+              </Button>
             </div>
           </CardContent>
         </Card>
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }
