@@ -79,11 +79,14 @@ export default function LeadGenerationForm({ onLeadsGenerated }: LeadGenerationF
       const data = await response.json();
       console.log('Response data:', data);
 
-      if (data.leads && Array.isArray(data.leads)) {
-        console.log('Processing leads:', data.leads.length);
+      // Handle both formats: direct array or wrapped in { leads: [...] }
+      const leads = Array.isArray(data) ? data : data.leads;
+
+      if (leads && Array.isArray(leads)) {
+        console.log('Processing leads:', leads.length);
         
         // Save leads to database with user_id
-        const leadsToSave = data.leads.map((lead: any) => ({
+        const leadsToSave = leads.map((lead: any) => ({
           ...lead,
           user_id: user.id,
           email_sent: false,
@@ -104,12 +107,12 @@ export default function LeadGenerationForm({ onLeadsGenerated }: LeadGenerationF
 
         console.log('Leads saved successfully:', savedLeads);
 
-        onLeadsGenerated(data.leads);
+        onLeadsGenerated(leads);
         setPrompt('');
         
         toast({
           title: 'Success!',
-          description: `Generated ${data.leads.length} leads successfully`,
+          description: `Generated ${leads.length} leads successfully`,
         });
       } else {
         console.error('Invalid response format:', data);
