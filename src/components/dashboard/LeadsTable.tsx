@@ -7,7 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Lead {
   id: string;
@@ -35,7 +38,11 @@ export default function LeadsTable({ leads, isLoading, onLeadUpdate }: LeadsTabl
   const [sortBy, setSortBy] = useState('name');
   const [generatingEmailFor, setGeneratingEmailFor] = useState<string | null>(null);
   const [sendingEmailFor, setSendingEmailFor] = useState<string | null>(null);
+  const [showToneDialog, setShowToneDialog] = useState(false);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [selectedTone, setSelectedTone] = useState('professional');
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const filteredLeads = leads.filter(lead =>
     lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -49,8 +56,15 @@ export default function LeadsTable({ leads, isLoading, onLeadUpdate }: LeadsTabl
     return aValue.toString().localeCompare(bValue.toString());
   });
 
-  const generateEmail = async (lead: Lead) => {
+  const handleGenerateEmail = (lead: Lead) => {
+    setSelectedLead(lead);
+    setShowToneDialog(true);
+  };
+
+  const generateEmail = async (lead: Lead, tone: string, isRegenerate = false) => {
     setGeneratingEmailFor(lead.id);
+    setShowToneDialog(false);
+    
     try {
       const response = await fetch('https://divverse-community.app.n8n.cloud/webhook-test/email-generation', {
         method: 'POST',
@@ -58,10 +72,17 @@ export default function LeadsTable({ leads, isLoading, onLeadUpdate }: LeadsTabl
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          lead_id: lead.id,
           name: lead.name,
           title: lead.title,
           company: lead.company,
-          snippet: lead.snippet
+          location: lead.location,
+          email: lead.email,
+          linkedin: lead.linkedin,
+          snippet: lead.snippet,
+          image: lead.image,
+          company_domain: lead.company_domain,
+          tone: tone
         }),
       });
 
@@ -72,12 +93,12 @@ export default function LeadsTable({ leads, isLoading, onLeadUpdate }: LeadsTabl
       const data = await response.json();
       
       if (onLeadUpdate) {
-        onLeadUpdate(lead.id, { generated_email: data.email });
+        onLeadUpdate(lead.id, { generated_email: data.email || data.email_content });
       }
 
       toast({
         title: 'Success',
-        description: 'Email generated successfully',
+        description: isRegenerate ? 'Email regenerated successfully' : 'Email generated successfully',
       });
     } catch (error) {
       console.error('Error generating email:', error);
@@ -91,11 +112,25 @@ export default function LeadsTable({ leads, isLoading, onLeadUpdate }: LeadsTabl
     }
   };
 
+  const regenerateEmail = async (lead: Lead) => {
+    setSelectedLead(lead);
+    setShowToneDialog(true);
+  };
+
   const sendEmail = async (lead: Lead) => {
     if (!lead.generated_email) {
       toast({
         title: 'No Email Generated',
         description: 'Please generate an email first',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!user?.email) {
+      toast({
+        title: 'User Email Not Found',
+        description: 'Please make sure you are logged in',
         variant: 'destructive',
       });
       return;
@@ -109,10 +144,11 @@ export default function LeadsTable({ leads, isLoading, onLeadUpdate }: LeadsTabl
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          to: lead.email,
-          subject: `Partnership Opportunity with ${lead.company}`,
-          body: lead.generated_email,
-          lead_name: lead.name
+          lead_id: lead.id,
+          email_content: lead.generated_email,
+          lead_email: lead.email,
+          lead_name: lead.name,
+          user_email: user.email
         }),
       });
 
@@ -313,11 +349,11 @@ export default function LeadsTable({ leads, isLoading, onLeadUpdate }: LeadsTabl
                       </div>
                     )}
 
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                       {!lead.generated_email && (
                         <Button
                           size="sm"
-                          onClick={() => generateEmail(lead)}
+                          onClick={() => handleGenerateEmail(lead)}
                           disabled={generatingEmailFor === lead.id}
                           className="text-xs"
                         >
@@ -330,20 +366,39 @@ export default function LeadsTable({ leads, isLoading, onLeadUpdate }: LeadsTabl
                         </Button>
                       )}
                       
-                      {lead.generated_email && !lead.email_sent && (
-                        <Button
-                          size="sm"
-                          onClick={() => sendEmail(lead)}
-                          disabled={sendingEmailFor === lead.id}
-                          className="text-xs"
-                        >
-                          {sendingEmailFor === lead.id ? (
-                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                          ) : (
-                            <Mail className="h-3 w-3 mr-1" />
+                      {lead.generated_email && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => regenerateEmail(lead)}
+                            disabled={generatingEmailFor === lead.id}
+                            className="text-xs"
+                          >
+                            {generatingEmailFor === lead.id ? (
+                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                            ) : (
+                              <RefreshCw className="h-3 w-3 mr-1" />
+                            )}
+                            Regenerate
+                          </Button>
+                          
+                          {!lead.email_sent && (
+                            <Button
+                              size="sm"
+                              onClick={() => sendEmail(lead)}
+                              disabled={sendingEmailFor === lead.id}
+                              className="text-xs"
+                            >
+                              {sendingEmailFor === lead.id ? (
+                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                              ) : (
+                                <Mail className="h-3 w-3 mr-1" />
+                              )}
+                              Send Email
+                            </Button>
                           )}
-                          Send Email
-                        </Button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -361,6 +416,50 @@ export default function LeadsTable({ leads, isLoading, onLeadUpdate }: LeadsTabl
           </div>
         )}
       </CardContent>
+
+      {/* Tone Selection Dialog */}
+      <Dialog open={showToneDialog} onOpenChange={setShowToneDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Select Email Tone</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="tone">Choose the tone for the email:</Label>
+              <Select value={selectedTone} onValueChange={setSelectedTone}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select tone" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="professional">Professional</SelectItem>
+                  <SelectItem value="casual">Casual</SelectItem>
+                  <SelectItem value="friendly">Friendly</SelectItem>
+                  <SelectItem value="funny">Funny</SelectItem>
+                  <SelectItem value="concise">Concise</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setShowToneDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (selectedLead) {
+                    generateEmail(selectedLead, selectedTone, !!selectedLead.generated_email);
+                  }
+                }}
+                disabled={!selectedLead}
+              >
+                Generate Email
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
