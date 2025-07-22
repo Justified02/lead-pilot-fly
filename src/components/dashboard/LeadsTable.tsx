@@ -2,15 +2,15 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ExternalLink, Download, Search, Mail, RefreshCw, Loader2, Copy, CheckCircle, XCircle } from 'lucide-react';
+import { ExternalLink, Download, Search, Mail, RefreshCw, Loader2, Copy, CheckCircle, Eye } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import EmailPreviewModal from './EmailPreviewModal';
 
 interface Lead {
   id: string;
@@ -37,10 +37,11 @@ export default function LeadsTable({ leads, isLoading, onLeadUpdate }: LeadsTabl
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('name');
   const [generatingEmailFor, setGeneratingEmailFor] = useState<string | null>(null);
-  const [sendingEmailFor, setSendingEmailFor] = useState<string | null>(null);
   const [showToneDialog, setShowToneDialog] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [selectedTone, setSelectedTone] = useState('professional');
+  const [showEmailPreview, setShowEmailPreview] = useState(false);
+  const [previewLead, setPreviewLead] = useState<Lead | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -61,7 +62,7 @@ export default function LeadsTable({ leads, isLoading, onLeadUpdate }: LeadsTabl
     setShowToneDialog(true);
   };
 
-  const generateEmail = async (lead: Lead, tone: string, isRegenerate = false) => {
+  const generateEmail = async (lead: Lead, tone: string) => {
     setGeneratingEmailFor(lead.id);
     setShowToneDialog(false);
     
@@ -91,14 +92,19 @@ export default function LeadsTable({ leads, isLoading, onLeadUpdate }: LeadsTabl
       }
 
       const data = await response.json();
+      const emailContent = data.email || data.email_content || (data.subject && data.body ? `${data.subject}\n\n${data.body}` : '');
       
       if (onLeadUpdate) {
-        onLeadUpdate(lead.id, { generated_email: data.email || data.email_content });
+        onLeadUpdate(lead.id, { generated_email: emailContent });
       }
+
+      // Open email preview modal
+      setPreviewLead(lead);
+      setShowEmailPreview(true);
 
       toast({
         title: 'Success',
-        description: isRegenerate ? 'Email regenerated successfully' : 'Email generated successfully',
+        description: 'Email generated successfully',
       });
     } catch (error) {
       console.error('Error generating email:', error);
@@ -112,69 +118,23 @@ export default function LeadsTable({ leads, isLoading, onLeadUpdate }: LeadsTabl
     }
   };
 
-  const regenerateEmail = async (lead: Lead) => {
-    setSelectedLead(lead);
-    setShowToneDialog(true);
+  const handleViewEmail = (lead: Lead) => {
+    setPreviewLead(lead);
+    setShowEmailPreview(true);
   };
 
-  const sendEmail = async (lead: Lead) => {
-    if (!lead.generated_email) {
-      toast({
-        title: 'No Email Generated',
-        description: 'Please generate an email first',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (!user?.email) {
-      toast({
-        title: 'User Email Not Found',
-        description: 'Please make sure you are logged in',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setSendingEmailFor(lead.id);
-    try {
-      const response = await fetch('https://divverse-community.app.n8n.cloud/webhook-test/send-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          lead_id: lead.id,
-          email_content: lead.generated_email,
-          lead_email: lead.email,
-          lead_name: lead.name,
-          user_email: user.email
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to send email');
-      }
-
-      if (onLeadUpdate) {
-        onLeadUpdate(lead.id, { email_sent: true });
-      }
-
-      toast({
-        title: 'Success',
-        description: 'Email sent successfully',
-      });
-    } catch (error) {
-      console.error('Error sending email:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to send email',
-        variant: 'destructive',
-      });
-    } finally {
-      setSendingEmailFor(null);
+  const handleEmailUpdate = (leadId: string, emailContent: string) => {
+    if (onLeadUpdate) {
+      onLeadUpdate(leadId, { generated_email: emailContent });
     }
   };
+
+  const handleEmailSent = (leadId: string) => {
+    if (onLeadUpdate) {
+      onLeadUpdate(leadId, { email_sent: true });
+    }
+  };
+
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -338,13 +298,17 @@ export default function LeadsTable({ leads, isLoading, onLeadUpdate }: LeadsTabl
 
                     {lead.generated_email && (
                       <div className="mb-4">
-                        <div className="bg-muted/50 p-3 rounded-lg">
-                          <p className="text-xs font-medium mb-2">Generated Email:</p>
-                          <Textarea
-                            value={lead.generated_email}
-                            readOnly
-                            className="text-xs h-24 resize-none"
-                          />
+                        <div className="bg-muted/50 p-3 rounded-lg flex items-center justify-between">
+                          <p className="text-xs font-medium">Email generated and ready</p>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleViewEmail(lead)}
+                            className="text-xs"
+                          >
+                            <Eye className="h-3 w-3 mr-1" />
+                            Preview
+                          </Button>
                         </div>
                       </div>
                     )}
@@ -367,38 +331,14 @@ export default function LeadsTable({ leads, isLoading, onLeadUpdate }: LeadsTabl
                       )}
                       
                       {lead.generated_email && (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => regenerateEmail(lead)}
-                            disabled={generatingEmailFor === lead.id}
-                            className="text-xs"
-                          >
-                            {generatingEmailFor === lead.id ? (
-                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                            ) : (
-                              <RefreshCw className="h-3 w-3 mr-1" />
-                            )}
-                            Regenerate
-                          </Button>
-                          
-                          {!lead.email_sent && (
-                            <Button
-                              size="sm"
-                              onClick={() => sendEmail(lead)}
-                              disabled={sendingEmailFor === lead.id}
-                              className="text-xs"
-                            >
-                              {sendingEmailFor === lead.id ? (
-                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                              ) : (
-                                <Mail className="h-3 w-3 mr-1" />
-                              )}
-                              Send Email
-                            </Button>
-                          )}
-                        </>
+                        <Button
+                          size="sm"
+                          onClick={() => handleViewEmail(lead)}
+                          className="text-xs"
+                        >
+                          <Eye className="h-3 w-3 mr-1" />
+                          View Email
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -449,7 +389,7 @@ export default function LeadsTable({ leads, isLoading, onLeadUpdate }: LeadsTabl
               <Button
                 onClick={() => {
                   if (selectedLead) {
-                    generateEmail(selectedLead, selectedTone, !!selectedLead.generated_email);
+                    generateEmail(selectedLead, selectedTone);
                   }
                 }}
                 disabled={!selectedLead}
@@ -460,6 +400,17 @@ export default function LeadsTable({ leads, isLoading, onLeadUpdate }: LeadsTabl
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Email Preview Modal */}
+      <EmailPreviewModal
+        isOpen={showEmailPreview}
+        onOpenChange={setShowEmailPreview}
+        lead={previewLead}
+        emailContent={previewLead?.generated_email || ''}
+        tone={selectedTone}
+        onEmailUpdate={handleEmailUpdate}
+        onEmailSent={handleEmailSent}
+      />
     </Card>
   );
 }
