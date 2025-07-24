@@ -92,7 +92,10 @@ export default function LeadsTable({ leads, isLoading, onLeadUpdate }: LeadsTabl
       }
 
       const data = await response.json();
-      const emailContent = data.email || data.email_content || (data.subject && data.body ? `${data.subject}\n\n${data.body}` : '');
+      // FIXED: Proper parsing to match History tab logic - prioritize structured { subject, body } format
+      const emailContent = data.subject && data.body 
+        ? `Subject: ${data.subject}\n\n${data.body}`
+        : data.email || data.email_content || '';
       
       if (onLeadUpdate) {
         onLeadUpdate(lead.id, { generated_email: emailContent });

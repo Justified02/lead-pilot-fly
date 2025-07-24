@@ -103,7 +103,10 @@ export default function EmailPreviewModal({
       }
 
       const data = await response.json();
-      const newEmailContent = data.email || data.email_content || data.subject + '\n\n' + data.body;
+      // FIXED: Proper parsing of structured response { subject, body } or fallback to single email content
+      const newEmailContent = data.subject && data.body 
+        ? `Subject: ${data.subject}\n\n${data.body}`
+        : data.email || data.email_content || '';
       
       onEmailUpdate(lead.id, newEmailContent);
       

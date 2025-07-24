@@ -131,7 +131,13 @@ export default function LeadGenerationForm({ onLeadsGenerated }: LeadGenerationF
 
         console.log('Leads saved successfully:', savedLeads);
 
-        onLeadsGenerated(leads);
+        // FIXED: Use savedLeads with proper IDs for frontend display
+        const leadsWithIds = savedLeads.map((savedLead: any, index: number) => ({
+          ...leads[index],
+          id: savedLead.id // Use the generated UUID from Supabase
+        }));
+
+        onLeadsGenerated(leadsWithIds);
         setPrompt('');
         
         toast({

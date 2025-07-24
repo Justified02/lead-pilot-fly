@@ -4,15 +4,39 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Link } from 'react-router-dom';
 import { Zap, Users, TrendingUp, Target, ArrowRight } from 'lucide-react';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const [totalLeads, setTotalLeads] = useState(0);
+
+  // FIXED: Fetch actual leads count from Supabase
+  useEffect(() => {
+    const fetchLeadsCount = async () => {
+      if (!user) return;
+      
+      try {
+        const { count, error } = await supabase
+          .from('lead_history')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id);
+          
+        if (error) throw error;
+        setTotalLeads(count || 0);
+      } catch (error) {
+        console.error('Error fetching leads count:', error);
+      }
+    };
+
+    fetchLeadsCount();
+  }, [user]);
 
   const stats = [
     {
       icon: Target,
       label: 'Leads Generated',
-      value: '0',
+      value: totalLeads.toString(),
       description: 'Total leads found'
     },
     {
